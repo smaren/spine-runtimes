@@ -1,0 +1,17 @@
+{
+"skeleton": { "hash": "Yum8VQ+sGRCkXiP700gw8aHUDwU", "spine": "3.6.50", "width": 50, "height": 50 },
+"bones": [
+	{ "name": "root" }
+],
+"events": {
+	"particles": {}
+},
+"animations": {
+	"event": {
+		"events": [
+			{ "time": 0.1, "name": "particles", "int": 1, "float": 0.5, "string": "particles_0" },
+			{ "time": 0.3, "name": "particles", "string": "particles_1" }
+		]
+	}
+}
+}
