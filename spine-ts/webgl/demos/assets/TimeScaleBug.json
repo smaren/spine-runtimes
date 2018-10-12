@@ -1,0 +1,32 @@
+{
+"skeleton": { "hash": "Yum8VQ+sGRCkXiP700gw8aHUDwU", "spine": "3.6.50", "width": 50, "height": 50 },
+"bones": [
+	{ "name": "root" },
+	{ "name": "bone", "parent": "root" }
+],
+"events": {
+	"particles": {}
+},
+"animations": {
+	"scale_2_200_ms": {
+		"bones": {
+			"bone": {
+				"scale": [
+					{ "time": 0, "x": 1, "y": 1 },
+					{ "time": 0.2, "x": 2, "y": 2 }
+				]
+			}
+		}
+	},
+	"translate_100_ms": {
+		"bones": {
+			"bone": {
+				"translate": [
+					{ "time": 0, "x": 0, "y": 0 },
+					{ "time": 0.1, "x": 100, "y": 100 }
+				]
+			}
+		}
+	}
+}
+}
