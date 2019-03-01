@@ -14,33 +14,23 @@ var timeScaleBugDemo = function(canvas, bgColor) {
 
     function startTest (skeletonObjects) {
         var skeleton = skeletonObjects.skeleton,
-            animationState = skeletonObjects.state,
-            trackEntry,
-            t;
+            animationState = skeletonObjects.state;
 
 
-        animationState.setAnimation(0, 'scale_2_200_ms', false);
-        trackEntry = animationState.addAnimation(0, 'translate_100_ms', false, -0.05);
+        var track0From = animationState.setAnimation(0, 'translate_100_ms', false);
+        var track0To = animationState.addAnimation(0, 'translate_100_ms', false, 0);
 
-        trackEntry.mixDuration = 0.05;
 
-        for (t = 0; t < 153; t++) {
-            update(skeleton, animationState, 0.001);
-        }
+        update(skeleton, animationState, 0.12);
+        // First a tick big enough so the next animation should be started.
 
-        trackEntry.timeScale = 0;
+        track0From.timeScale = 0;
+        track0To.timeScale = 0;
 
-        for (t = 0; t < 1; t++) {
-            update(skeleton, animationState, 0.001);
-        }
+        update(skeleton, animationState, 0.1);
+        //This update causes division by 0 followed by multiplication by 0 - result is NaN
 
-        trackEntry.timeScale = 1;
-
-        for (t = 0; t < 150; t++) {
-            update(skeleton, animationState, 0.001);
-        }
-
-        console.log('Scale should be as setup pose (1), but is ' + skeleton.findBone('bone').scaleX);
+        console.log('trackTime on track0To is NaN: ' + isNaN(track0To.trackTime));
     }
 
     function update (skeleton, animationState, dt) {
