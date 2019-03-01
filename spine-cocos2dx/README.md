@@ -1,6 +1,6 @@
 # spine-cocos2dx v3.x
 
-The spine-cocos2dx runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [cocos2d-x](http://www.cocos2d-x.org/). spine-cocos2dx is based on [spine-c](https://github.com/EsotericSoftware/spine-runtimes/tree/master/spine-c).
+The spine-cocos2dx runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [cocos2d-x](http://www.cocos2d-x.org/). spine-cocos2dx is based on [spine-cpp](../spine-cpp).
 
 ## Licensing
 
@@ -10,7 +10,7 @@ The Spine Runtimes are developed with the intent to be used with data exported f
 
 ## Spine version
 
-spine-cocos2dx works with data exported from Spine 3.6.xx.
+spine-cocos2dx works with data exported from Spine 3.7.xx.
 
 spine-cocos2dx supports all Spine features.
 
@@ -22,11 +22,11 @@ The setup for cocos2d-x differs from most other Spine Runtimes because the cocos
 2. Delete the folder `cocos2d/cocos/editor-support/spine`. This will remove the outdated Spine cocos2d-x runtime shipped by cocos2d-x.
 3. Open your project in your IDE of choice, then open the cocos2d_libs sub project and delete the `editor-support/spine` group. This will remove the outdated Spine cocos2d-x runtime shipped by cocos2d-x from your build.
 3. Download the Spine Runtimes source using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip via the download button above.
-4. Add the sources from `spine-c/spine-c/src/spine` and `spine-cocos2dx/src/spine` to your project
-4. Add the folders `spine-c/spine-c/include` and `spine-cocos2dx/src` to your header search path. Note that includes are specified as `#inclue <spine/file.h>`, so the `spine` directory cannot be omitted when copying the source files.
+4. Add the sources from `spine-cpp/spine-cpp/src/spine` and `spine-cocos2dx/src/spine` to your project
+4. Add the folders `spine-cpp/spine-cpp/include` and `spine-cocos2dx/src` to your header search path. Note that includes are specified as `#inclue <spine/file.h>`, so the `spine` directory cannot be omitted when copying the source files.
 
 ## Example
-The Spine cocos2d-x example works on Windows and Mac OS X.
+The Spine cocos2d-x example works on Windows, Mac OS X, iOS and Android.
 
 ### Windows
 1. Install [Visual Studio 2015 Community](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)

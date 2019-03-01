@@ -837,10 +837,10 @@ MonoBehaviour:
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 28
+    m_FontSize: 26
     m_FontStyle: 0
     m_BestFit: 0
-    m_MinSize: 10
+    m_MinSize: 2
     m_MaxSize: 40
     m_Alignment: 0
     m_AlignByGeometry: 0
@@ -848,9 +848,10 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: 'This implementation uses a custom skin, template skin and Sprites as the
-    source image. When you "equip" an item, the system will generate a new attachment
-    based on the template attachment, and map a Sprite''s image onto it. It uses Spine.Unity.Modules.AttachmentTools.
+  m_Text: 'This implementation uses (1) a custom skin, (2) template skin and (3) Sprites.
+    The Sprites serve as the source images. When you "equip" an item, the system will
+    generate a new attachment based on the template attachment (from the template
+    skin), and map a Sprite''s image onto it. It uses Spine.Unity.Modules.AttachmentTools.
 
 
     Pressing "Done" will optimize the skin/attachments. It generates a new skin and
@@ -1695,7 +1696,6 @@ MonoBehaviour:
   singleSubmesh: 0
   addNormals: 0
   calculateTangents: 0
-  logErrors: 0
   disableRenderingOnOverride: 1
   _animationName: walk
   loop: 1

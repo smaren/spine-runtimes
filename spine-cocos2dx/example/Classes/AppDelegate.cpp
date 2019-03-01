@@ -37,15 +37,22 @@
 #include "BatchingExample.h"
 #include "CoinExample.h"
 #include "SkeletonRendererSeparatorExample.h"
+#include <spine/Debug.h>
 #include "AppMacros.h"
+#include <spine/SkeletonTwoColorBatch.h>
 
 USING_NS_CC;
 using namespace std;
+
+DebugExtension debugExtension(SpineExtension::getInstance());
 
 AppDelegate::AppDelegate () {
 }
 
 AppDelegate::~AppDelegate () {
+	SkeletonBatch::destroyInstance();
+	SkeletonTwoColorBatch::destroyInstance();
+	debugExtension.reportLeaks();
 }
 
 bool AppDelegate::applicationDidFinishLaunching () {
@@ -53,6 +60,8 @@ bool AppDelegate::applicationDidFinishLaunching () {
 	auto director = Director::getInstance();
 	auto glview = director->getOpenGLView();
 	if (!glview) {
+		GLContextAttrs attrs = { 8, 8, 8, 8, 0, 0 };
+		GLView::setGLContextAttrs(attrs);
 		glview = GLViewImpl::create("Spine Example");
 		director->setOpenGLView(glview);
 	}
@@ -65,7 +74,7 @@ bool AppDelegate::applicationDidFinishLaunching () {
 	glview->setDesignResolutionSize(designResolutionSize.width, designResolutionSize.height, ResolutionPolicy::NO_BORDER);
 #endif
 
-	Size frameSize = glview->getFrameSize();
+	cocos2d::Size frameSize = glview->getFrameSize();
 	
 	vector<string> searchPath;
 
@@ -98,9 +107,12 @@ bool AppDelegate::applicationDidFinishLaunching () {
 	// set FPS. the default value is 1.0/60 if you don't call this
 	director->setAnimationInterval(1.0f / 60);
 
+	// Set the Debug wrapper extension so we know about memory leaks.
+	SpineExtension::setInstance(&debugExtension);
+	
 	// create a scene. it's an autorelease object
 	//auto scene = RaptorExample::scene();
-	auto scene = SkeletonRendererSeparatorExample::scene();
+	auto scene = CoinExample::scene();
 
 	// run
 	director->runWithScene(scene);

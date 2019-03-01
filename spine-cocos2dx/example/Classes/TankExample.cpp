@@ -43,16 +43,16 @@ Scene* TankExample::scene () {
 bool TankExample::init () {
 	if (!LayerColor::initWithColor(Color4B(128, 128, 128, 255))) return false;
 
-	skeletonNode = SkeletonAnimation::createWithJsonFile("tank-pro.json", "tank.atlas", 0.5f);
-	skeletonNode->setAnimation(0, "drive", true);
+	skeletonNode = SkeletonAnimation::createWithBinaryFile("tank-pro.skel", "tank.atlas", 0.5f);
+	skeletonNode->setAnimation(0, "shoot", true);
 
 	skeletonNode->setPosition(Vec2(_contentSize.width / 2 + 400, 20));
 	addChild(skeletonNode);
 
 	scheduleUpdate();
-	
+
 	EventListenerTouchOneByOne* listener = EventListenerTouchOneByOne::create();
-	listener->onTouchBegan = [this] (Touch* touch, Event* event) -> bool {
+	listener->onTouchBegan = [this] (Touch* touch, cocos2d::Event* event) -> bool {
 		if (!skeletonNode->getDebugBonesEnabled())
 			skeletonNode->setDebugBonesEnabled(true);
 		else if (skeletonNode->getTimeScale() == 1)

@@ -66,7 +66,7 @@ namespace Spine.Unity.Examples {
 			if (sourceMaterial == null) {
 				var skeletonGraphic = GetComponent<SkeletonGraphic>();
 				if (skeletonGraphic != null)
-					sourceMaterial = skeletonGraphic.SkeletonDataAsset.atlasAssets[0].materials[0];
+					sourceMaterial = skeletonGraphic.SkeletonDataAsset.atlasAssets[0].PrimaryMaterial;
 			}
 		}
 
@@ -118,8 +118,8 @@ namespace Spine.Unity.Examples {
 			// 				call Skin.GetRepackedSkin to get a cloned skin with cloned attachments that all use one texture.
 			if (repack)	{
 				var repackedSkin = new Skin("repacked skin");
-				repackedSkin.Append(skeleton.Data.DefaultSkin);
-				repackedSkin.Append(customSkin);
+				repackedSkin.AddAttachments(skeleton.Data.DefaultSkin);
+				repackedSkin.AddAttachments(customSkin);
 				repackedSkin = repackedSkin.GetRepackedSkin("repacked skin", sourceMaterial, out runtimeMaterial, out runtimeAtlas);
 				skeleton.SetSkin(repackedSkin);
 			} else {

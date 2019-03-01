@@ -1,4 +1,5 @@
-
+.metadata/
+RemoteSystemsTempFiles/
 target
 *Debug.win32
 *.sdf
@@ -12,9 +13,11 @@ target
 *.user
 .DS_Store
 
-
 .idea/
 build/
+cmake-build-debug/
+
+spine-as3/spine-as3/.settings/com.powerflasher.fdt.core.metaDataTags.prefs
 
 spine-c/Debug/*
 
@@ -23,6 +26,9 @@ spine-cpp/Debug/*
 spine-sfml/Debug/*
 spine-sfml/SFML
 spine-sfml/dependencies
+spine-sfml/c/dependencies
+spine-sfml/cpp/dependencies
+spine-sfml/cmake-build
 
 spine-libgdx/spine-libgdx/bin
 spine-libgdx/spine-libgdx-tests/bin
@@ -35,6 +41,7 @@ spine-cocos2dx/example/cocos2d
 spine-cocos2dx/example/proj.win32/spine-cocos2d-x.VC.opendb
 spine-cocos2dx/example/proj.win32/spine-cocos2d-x.VC.db
 xcuserdata/
+xcshareddata/
 
 spine-cocos2d-objc/cocos2d/*
 spine-cocos2d-objc/spine-cocos2d-iphone-objc.xcodeproj/project.xcworkspace/xcshareddata/
@@ -45,6 +52,7 @@ spine-csharp/src/*.meta
 spine-csharp/src/*.cs.meta
 spine-csharp/src/Attachments/*.cs.meta
 
+spine-monogame/.vs/
 spine-monogame/example/bin
 spine-monogame/example/obj
 spine-monogame/example/Content/bin/
@@ -103,6 +111,7 @@ spine-ue4/Intermediate
 spine-ue4/Saved
 spine-ue4/SpineUE4.xcworkspace
 spine-ue4/Plugins/SpinePlugin/Source/SpinePlugin/Public/spine-c
+spine-ue4/Plugins/SpinePlugin/Source/SpinePlugin/Public/spine-cpp
 spine-ue4/Plugins/SpinePlugin/Binaries
 spine-ue4/SpineUE4.VC.opendb
 spine-ue4/SpineUE4.VC.db

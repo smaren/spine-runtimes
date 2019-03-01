@@ -34,6 +34,7 @@ local Triangulator = require "spine-lua.Triangulator"
 local setmetatable = setmetatable
 local math_min = math.min
 local math_max = math.max
+local math_abs = math.abs
 local ipairs = ipairs
 local table_insert = table.insert
 local table_remove = table.remove
@@ -66,7 +67,7 @@ function SkeletonClipping:clipStart(slot, clip)
 	clip:computeWorldVertices(slot, 0, n, vertices, 0, 2)
 	self:makeClockwise(self.clippingPolygon)
 	self.clippingPolygons = self.triangulator:decompose(self.clippingPolygon, self.triangulator:triangulate(self.clippingPolygon))
-	for i,polygon in ipairs(self.clippingPolygons) do
+	for _,polygon in ipairs(self.clippingPolygons) do
 		self:makeClockwise(polygon)
 		table_insert(polygon, polygon[1])
 		table_insert(polygon, polygon[2])		
@@ -256,16 +257,28 @@ function SkeletonClipping:clip(x1, y1, x2, y2, x3, y3, clippingArea, output)
 					-- v1 inside, v2 outside
 					local c0 = inputY2 - inputY
 					local c2 = inputX2 - inputX
-					local ua = (c2 * (edgeY - inputY) - c0 * (edgeX - inputX)) / (c0 * (edgeX2 - edgeX) - c2 * (edgeY2 - edgeY))
-					table_insert(output, edgeX + (edgeX2 - edgeX) * ua)
-					table_insert(output, edgeY + (edgeY2 - edgeY) * ua)
+					local s = c0 * (edgeX2 - edgeX) - c2 * (edgeY2 - edgeY)
+					if math_abs(s) > 0.000001 then
+						local ua = (c2 * (edgeY - inputY) - c0 * (edgeX - inputX)) / s
+						table_insert(output, edgeX + (edgeX2 - edgeX) * ua)
+						table_insert(output, edgeY + (edgeY2 - edgeY) * ua)
+					else
+						table_insert(output, edgeX)
+						table_insert(output, edgeY)
+					end
 				end
 			elseif side2 then -- v1 outside, v2 inside
 				local c0 = inputY2 - inputY
 				local c2 = inputX2 - inputX
-				local ua = (c2 * (edgeY - inputY) - c0 * (edgeX - inputX)) / (c0 * (edgeX2 - edgeX) - c2 * (edgeY2 - edgeY))
-				table_insert(output, edgeX + (edgeX2 - edgeX) * ua)
-				table_insert(output, edgeY + (edgeY2 - edgeY) * ua)
+				local s = c0 * (edgeX2 - edgeX) - c2 * (edgeY2 - edgeY)
+				if math_abs(s) > 0.000001 then
+					local ua = (c2 * (edgeY - inputY) - c0 * (edgeX - inputX)) / s
+					table_insert(output, edgeX + (edgeX2 - edgeX) * ua)
+					table_insert(output, edgeY + (edgeY2 - edgeY) * ua)
+				else
+					table_insert(output, edgeX)
+					table_insert(output, edgeY)
+				end
 				table_insert(output, inputX2)
 				table_insert(output, inputY2)
 			end			
@@ -274,7 +287,7 @@ function SkeletonClipping:clip(x1, y1, x2, y2, x3, y3, clippingArea, output)
 		end
 
 		if outputStart == #output then -- All edges outside.
-			for i, v in ipairs(originalOutput) do
+			for i, _ in ipairs(originalOutput) do
 				originalOutput[i] = nil
 			end
 			return true
@@ -286,7 +299,7 @@ function SkeletonClipping:clip(x1, y1, x2, y2, x3, y3, clippingArea, output)
 		if (i == clippingVerticesLast) then break end
 		local temp = output
 		output = input
-		for i, v in ipairs(output) do
+		for i, _ in ipairs(output) do
 			output[i] = nil
 		end
 		input = temp
@@ -294,7 +307,7 @@ function SkeletonClipping:clip(x1, y1, x2, y2, x3, y3, clippingArea, output)
 	end
 
 	if originalOutput ~= output then
-		for i, v in ipairs(originalOutput) do
+		for i, _ in ipairs(originalOutput) do
 			originalOutput[i] = nil
 		end
 		i = 1

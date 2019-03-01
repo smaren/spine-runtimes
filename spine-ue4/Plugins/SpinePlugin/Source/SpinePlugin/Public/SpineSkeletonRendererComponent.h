@@ -31,13 +31,13 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "RuntimeMeshComponent.h"
+#include "ProceduralMeshComponent.h"
 #include "SpineSkeletonAnimationComponent.h"
 #include "SpineSkeletonRendererComponent.generated.h"
 
 
 UCLASS(ClassGroup=(Spine), meta=(BlueprintSpawnableComponent))
-class SPINEPLUGIN_API USpineSkeletonRendererComponent: public URuntimeMeshComponent {
+class SPINEPLUGIN_API USpineSkeletonRendererComponent: public UProceduralMeshComponent {
 	GENERATED_BODY()
 
 public: 
@@ -47,6 +47,7 @@ public:
 		
 	virtual void TickComponent (float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	// Material Instance parents
 	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadOnly)
 	UMaterialInterface* NormalBlendMaterial;
 	
@@ -59,6 +60,23 @@ public:
 	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadOnly)
 	UMaterialInterface* ScreenBlendMaterial;
 
+	// Need to hold on to the dynamic instances, or the GC will kill us while updating them
+	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
+	TArray<UMaterialInstanceDynamic*> atlasNormalBlendMaterials;
+	TMap<spine::AtlasPage*, UMaterialInstanceDynamic*> pageToNormalBlendMaterial;
+	
+	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
+	TArray<UMaterialInstanceDynamic*> atlasAdditiveBlendMaterials;
+	TMap<spine::AtlasPage*, UMaterialInstanceDynamic*> pageToAdditiveBlendMaterial;
+	
+	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
+	TArray<UMaterialInstanceDynamic*> atlasMultiplyBlendMaterials;
+	TMap<spine::AtlasPage*, UMaterialInstanceDynamic*> pageToMultiplyBlendMaterial;
+	
+	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
+	TArray<UMaterialInstanceDynamic*> atlasScreenBlendMaterials;
+	TMap<spine::AtlasPage*, UMaterialInstanceDynamic*> pageToScreenBlendMaterial;
+	
 	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
 	float DepthOffset = 0.1f;
 	
@@ -68,30 +86,17 @@ public:
 	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
 	FLinearColor Color = FLinearColor(1, 1, 1, 1);
 
+	/** Whether to generate collision geometry for the skeleton, or not. */
+	UPROPERTY(Category = Spine, EditAnywhere, BlueprintReadWrite)
+	bool bCreateCollision;
+
 	virtual void FinishDestroy() override;
 	
 protected:
-	void UpdateMesh (spSkeleton* Skeleton);
+	void UpdateMesh (spine::Skeleton* Skeleton);
 
 	void Flush (int &Idx, TArray<FVector> &Vertices, TArray<int32> &Indices, TArray<FVector2D> &Uvs, TArray<FColor> &Colors, TArray<FVector> &Colors2, UMaterialInstanceDynamic* Material);
 	
-	// Need to hold on to the dynamic instances, or the GC will kill us while updating them
-	UPROPERTY()
-	TArray<UMaterialInstanceDynamic*> atlasNormalBlendMaterials;
-	TMap<spAtlasPage*, UMaterialInstanceDynamic*> pageToNormalBlendMaterial;
-	
-	UPROPERTY()
-	TArray<UMaterialInstanceDynamic*> atlasAdditiveBlendMaterials;
-	TMap<spAtlasPage*, UMaterialInstanceDynamic*> pageToAdditiveBlendMaterial;
-	
-	UPROPERTY()
-	TArray<UMaterialInstanceDynamic*> atlasMultiplyBlendMaterials;
-	TMap<spAtlasPage*, UMaterialInstanceDynamic*> pageToMultiplyBlendMaterial;
-	
-	UPROPERTY()
-	TArray<UMaterialInstanceDynamic*> atlasScreenBlendMaterials;
-	TMap<spAtlasPage*, UMaterialInstanceDynamic*> pageToScreenBlendMaterial;
-
-	spFloatArray* worldVertices;
-	spSkeletonClipping* clipper;
+	spine::Vector<float> worldVertices;
+	spine::SkeletonClipping clipper;
 };

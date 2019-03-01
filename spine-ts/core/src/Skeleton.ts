@@ -42,7 +42,7 @@ module spine {
 		skin: Skin;
 		color: Color;
 		time = 0;
-		flipX = false; flipY = false;
+		scaleX = 1; scaleY = 1;
 		x = 0; y = 0;
 
 		constructor (data: SkeletonData) {
@@ -286,8 +286,10 @@ module spine {
 			let ikConstraints = this.ikConstraints;
 			for (let i = 0, n = ikConstraints.length; i < n; i++) {
 				let constraint = ikConstraints[i];
-				constraint.bendDirection = constraint.data.bendDirection;
 				constraint.mix = constraint.data.mix;
+				constraint.bendDirection = constraint.data.bendDirection;
+				constraint.compress = constraint.data.compress;
+				constraint.stretch = constraint.data.stretch;
 			}
 
 			let transformConstraints = this.transformConstraints;
@@ -468,7 +470,7 @@ module spine {
 		 * @param offset The distance from the skeleton origin to the bottom left corner of the AABB.
 		 * @param size The width and height of the AABB.
 		 * @param temp Working memory */
-		getBounds (offset: Vector2, size: Vector2, temp: Array<number>) {
+		getBounds (offset: Vector2, size: Vector2, temp: Array<number> = new Array<number>(2)) {
 			if (offset == null) throw new Error("offset cannot be null.");
 			if (size == null) throw new Error("size cannot be null.");
 			let drawOrder = this.drawOrder;

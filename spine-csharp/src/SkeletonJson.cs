@@ -104,6 +104,7 @@ namespace Spine {
 				skeletonData.height = GetFloat(skeletonMap, "height", 0);
 				skeletonData.fps = GetFloat(skeletonMap, "fps", 0);
 				skeletonData.imagesPath = GetString(skeletonMap, "images", null);
+				skeletonData.audioPath = GetString(skeletonMap, "audio", null);
 			}
 
 			// Bones.
@@ -179,9 +180,11 @@ namespace Spine {
 					string targetName = (string)constraintMap["target"];
 					data.target = skeletonData.FindBone(targetName);
 					if (data.target == null) throw new Exception("Target bone not found: " + targetName);
-
-					data.bendDirection = GetBoolean(constraintMap, "bendPositive", true) ? 1 : -1;
 					data.mix = GetFloat(constraintMap, "mix", 1);
+					data.bendDirection = GetBoolean(constraintMap, "bendPositive", true) ? 1 : -1;
+					data.compress = GetBoolean(constraintMap, "compress", false);
+					data.stretch = GetBoolean(constraintMap, "stretch", false);
+					data.uniform = GetBoolean(constraintMap, "uniform", false);
 
 					skeletonData.ikConstraints.Add(data);
 				}
@@ -293,6 +296,11 @@ namespace Spine {
 					data.Int = GetInt(entryMap, "int", 0);
 					data.Float = GetFloat(entryMap, "float", 0);
 					data.String = GetString(entryMap, "string", string.Empty);
+					data.AudioPath = GetString(entryMap, "audio", null);
+					if (data.AudioPath != null) {
+						data.Volume = GetFloat(entryMap, "volume", 1);
+						data.Balance = GetFloat(entryMap, "balance", 0);
+					}
 					skeletonData.events.Add(data);
 				}
 			}
@@ -592,10 +600,14 @@ namespace Spine {
 					timeline.ikConstraintIndex = skeletonData.ikConstraints.IndexOf(constraint);
 					int frameIndex = 0;
 					foreach (Dictionary<string, Object> valueMap in values) {
-						float time = (float)valueMap["time"];
-						float mix = GetFloat(valueMap, "mix", 1);
-						bool bendPositive = GetBoolean(valueMap, "bendPositive", true);
-						timeline.SetFrame(frameIndex, time, mix, bendPositive ? 1 : -1);
+						timeline.SetFrame(
+							frameIndex,
+							(float)valueMap["time"],
+							GetFloat(valueMap, "mix", 1),
+							GetBoolean(valueMap, "bendPositive", true) ? 1 : -1,
+							GetBoolean(valueMap, "compress", true),
+							GetBoolean(valueMap, "stretch", false)
+						);
 						ReadCurve(valueMap, timeline, frameIndex);
 						frameIndex++;
 					}
@@ -771,10 +783,15 @@ namespace Spine {
 				foreach (Dictionary<string, Object> eventMap in eventsMap) {
 					EventData eventData = skeletonData.FindEvent((string)eventMap["name"]);
 					if (eventData == null) throw new Exception("Event not found: " + eventMap["name"]);
-					var e = new Event((float)eventMap["time"], eventData);
-					e.Int = GetInt(eventMap, "int", eventData.Int);
-					e.Float = GetFloat(eventMap, "float", eventData.Float);
-					e.String = GetString(eventMap, "string", eventData.String);
+					var e = new Event((float)eventMap["time"], eventData) {
+						intValue = GetInt(eventMap, "int", eventData.Int),
+						floatValue = GetFloat(eventMap, "float", eventData.Float),
+						stringValue = GetString(eventMap, "string", eventData.String)
+					};
+					if (e.data.AudioPath != null) {
+						e.volume = GetFloat(eventMap, "volume", eventData.Volume);
+						e.balance = GetFloat(eventMap, "balance", eventData.Balance);
+					}
 					timeline.SetFrame(frameIndex++, e);
 				}
 				timelines.Add(timeline);

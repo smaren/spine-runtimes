@@ -43,16 +43,16 @@ Scene* CoinExample::scene () {
 bool CoinExample::init () {
 	if (!LayerColor::initWithColor(Color4B(128, 128, 128, 255))) return false;
 
-	skeletonNode = SkeletonAnimation::createWithJsonFile("coin-pro.json", "coin.atlas", 1);
-	skeletonNode->setAnimation(0, "rotate", true);	
+	skeletonNode = SkeletonAnimation::createWithBinaryFile("coin-pro.skel", "coin.atlas", 1);
+	skeletonNode->setAnimation(0, "animation", true);
 
-	skeletonNode->setPosition(Vec2(_contentSize.width / 2, 100));
+	skeletonNode->setPosition(Vec2(_contentSize.width / 2, _contentSize.height / 2));
 	addChild(skeletonNode);
 
 	scheduleUpdate();
-	
+
 	EventListenerTouchOneByOne* listener = EventListenerTouchOneByOne::create();
-	listener->onTouchBegan = [this] (Touch* touch, Event* event) -> bool {
+	listener->onTouchBegan = [this] (Touch* touch, cocos2d::Event* event) -> bool {
 		if (!skeletonNode->getDebugBonesEnabled())
 			skeletonNode->setDebugBonesEnabled(true);
 		else if (skeletonNode->getTimeScale() == 1)

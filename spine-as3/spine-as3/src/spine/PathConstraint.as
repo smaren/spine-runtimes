@@ -72,8 +72,7 @@ package spine {
 			if (!translate && !rotate) return;
 
 			var data : PathConstraintData = this._data;
-			var spacingMode : SpacingMode = data.spacingMode;
-			var lengthSpacing : Boolean = spacingMode == SpacingMode.length;
+			var percentSpacing : Boolean = data.spacingMode == SpacingMode.percent;			
 			var rotateMode : RotateMode = data.rotateMode;
 			var tangents : Boolean = rotateMode == RotateMode.tangent, scale : Boolean = rotateMode == RotateMode.chainScale;
 			var boneCount : int = this._bones.length, spacesCount : int = tangents ? boneCount : boneCount + 1;
@@ -81,17 +80,26 @@ package spine {
 			this._spaces.length = spacesCount;
 			var spaces : Vector.<Number> = this._spaces, lengths : Vector.<Number> = null;
 			var spacing : Number = this.spacing;
-			if (scale || lengthSpacing) {
+			if (scale || !percentSpacing) {
 				if (scale) {
 					this._lengths.length = boneCount;
 					lengths = this._lengths;
 				}
+				var lengthSpacing : Boolean = data.spacingMode == SpacingMode.length;
 				for (var i : int = 0, n : int = spacesCount - 1; i < n;) {
 					var bone : Bone = bones[i];
 					var setupLength : Number = bone.data.length;
 					if (setupLength < epsilon) {
 						if (scale) lengths[i] = 0;
 						spaces[++i] = 0;
+					} else if (percentSpacing) {
+						if (scale) {
+							var x_l : Number = setupLength * bone.a;
+							var y_l : Number = setupLength * bone.c;
+							var length_l : Number = Math.sqrt(x_l * x_l + y_l * y_l);
+							lengths[i] = length_l;
+						}
+						spaces[++i] = spacing;
 					} else {
 						var x : Number = setupLength * bone.a, y : Number = setupLength * bone.c;
 						var length : Number = Math.sqrt(x * x + y * y);
@@ -104,7 +112,7 @@ package spine {
 					spaces[i] = spacing;
 			}
 
-			var positions : Vector.<Number> = computeWorldPositions(attachment, spacesCount, tangents, data.positionMode == PositionMode.percent, spacingMode == SpacingMode.percent);
+			var positions : Vector.<Number> = computeWorldPositions(attachment, spacesCount, tangents, data.positionMode == PositionMode.percent, percentSpacing);
 			var boneX : Number = positions[0], boneY : Number = positions[1], offsetRotation : Number = data.offsetRotation;
 			var tip : Boolean = false;
 			if (offsetRotation == 0)
@@ -181,7 +189,7 @@ package spine {
 				var pathLength : Number = lengths[curveCount];
 				if (percentPosition) position *= pathLength;
 				if (percentSpacing) {
-					for (var i : int = 0; i < spacesCount; i++)
+					for (var i : int = 1; i < spacesCount; i++)
 						spaces[i] *= pathLength;
 				}
 				this._world.length = 8;
@@ -292,9 +300,12 @@ package spine {
 				x1 = x2;
 				y1 = y2;
 			}
-			if (percentPosition) position *= pathLength;
+			if (percentPosition)
+				position *= pathLength;
+			else
+				position *= pathLength / path.lengths[curveCount - 1];
 			if (percentSpacing) {
-				for (i = 0; i < spacesCount; i++)
+				for (i = 1; i < spacesCount; i++)
 					spaces[i] *= pathLength;
 			}
 
@@ -405,13 +416,23 @@ package spine {
 		}
 
 		private function addCurvePosition(p : Number, x1 : Number, y1 : Number, cx1 : Number, cy1 : Number, cx2 : Number, cy2 : Number, x2 : Number, y2 : Number, out : Vector.<Number>, o : int, tangents : Boolean) : void {
-			if (p == 0 || isNaN(p)) p = 0.0001;
+			if (p == 0 || isNaN(p)) {
+				out[o] = x1;
+				out[o + 1] = y1;
+				out[o + 2] = Math.atan2(cy1 - y1, cx1 - x1);
+				return;
+			}
 			var tt : Number = p * p, ttt : Number = tt * p, u : Number = 1 - p, uu : Number = u * u, uuu : Number = uu * u;
 			var ut : Number = u * p, ut3 : Number = ut * 3, uut3 : Number = u * ut3, utt3 : Number = ut3 * p;
 			var x : Number = x1 * uuu + cx1 * uut3 + cx2 * utt3 + x2 * ttt, y : Number = y1 * uuu + cy1 * uut3 + cy2 * utt3 + y2 * ttt;
 			out[o] = x;
 			out[o + 1] = y;
-			if (tangents) out[o + 2] = Math.atan2(y - (y1 * uu + cy1 * ut * 2 + cy2 * tt), x - (x1 * uu + cx1 * ut * 2 + cx2 * tt));
+			if (tangents) {
+				if (p < 0.001)
+					out[o + 2] = Math.atan2(cy1 - y1, cx1 - x1);
+				else
+					out[o + 2] = Math.atan2(y - (y1 * uu + cy1 * ut * 2 + cy2 * tt), x - (x1 * uu + cx1 * ut * 2 + cx2 * tt));
+			}
 		}
 
 		public function get bones() : Vector.<Bone> {

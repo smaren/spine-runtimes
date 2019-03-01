@@ -33,7 +33,7 @@
 #include <spine/extension.h>
 #include <spine/AtlasAttachmentLoader.h>
 #include <spine/Animation.h>
-#include "kvec.h"
+#include <spine/Array.h>
 
 typedef struct {
 	const unsigned char* cursor; 
@@ -244,16 +244,17 @@ static void _spSkeletonBinary_addLinkedMesh (spSkeletonBinary* self, spMeshAttac
 	linkedMesh->parent = parent;
 }
 
+_SP_ARRAY_DECLARE_TYPE(spTimelineArray, spTimeline*)
+_SP_ARRAY_IMPLEMENT_TYPE(spTimelineArray, spTimeline*)
+
 static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, const char* name,
 		_dataInput* input, spSkeletonData *skeletonData) {
-	kvec_t(spTimeline*) timelines;
+	spTimelineArray* timelines = spTimelineArray_create(18);
 	float duration = 0;
 	int i, n, ii, nn, iii, nnn;
 	int frameIndex;
 	int drawOrderCount, eventCount;
 	spAnimation* animation;
-
-	kv_init(timelines);
 
 	/* Slot timelines. */
 	for (i = 0, n = readVarint(input, 1); i < n; ++i) {
@@ -272,7 +273,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spAttachmentTimeline_setFrame(timeline, frameIndex, time, attachmentName);
 						FREE(attachmentName);
 					}
-					kv_push(spTimeline*, timelines, SUPER(timeline));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[frameCount - 1]);
 					break;
 				}
@@ -286,7 +287,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spColorTimeline_setFrame(timeline, frameIndex, time, r, g, b, a);
 						if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 					}
-					kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[(frameCount - 1) * COLOR_ENTRIES]);
 					break;
 				}
@@ -302,15 +303,14 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spTwoColorTimeline_setFrame(timeline, frameIndex, time, r, g, b, a, r2, g2, b2);
 						if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 					}
-					kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[(frameCount - 1) * TWOCOLOR_ENTRIES]);
 					break;
 				}
 				default: {
-					int i;
-					for (i = 0; i < kv_size(timelines); ++i)
-						spTimeline_dispose(kv_A(timelines, i));
-					kv_destroy(timelines);
+					for (iii = 0; iii < timelines->size; ++iii)
+						spTimeline_dispose(timelines->items[iii]);
+					spTimelineArray_dispose(timelines);
 					_spSkeletonBinary_setError(self, "Invalid timeline type for a slot: ", skeletonData->slots[slotIndex]->name);
 					return 0;
 				}
@@ -334,7 +334,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spRotateTimeline_setFrame(timeline, frameIndex, time, degrees);
 						if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 					}
-					kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[(frameCount - 1) * ROTATE_ENTRIES]);
 					break;
 				}
@@ -365,15 +365,14 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spTranslateTimeline_setFrame(timeline, frameIndex, time, x, y);
 						if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 					}
-					kv_push(spTimeline*, timelines, SUPER_CAST(spTimeline, timeline));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[(frameCount - 1) * TRANSLATE_ENTRIES]);
 					break;
 				}
 				default: {
-					int i;
-					for (i = 0; i < kv_size(timelines); ++i)
-						spTimeline_dispose(kv_A(timelines, i));
-					kv_destroy(timelines);
+					for (iii = 0; iii < timelines->size; ++iii)
+						spTimeline_dispose(timelines->items[iii]);
+					spTimelineArray_dispose(timelines);
 					_spSkeletonBinary_setError(self, "Invalid timeline type for a bone: ", skeletonData->bones[boneIndex]->name);
 					return 0;
 				}
@@ -391,10 +390,12 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 			float time = readFloat(input);
 			float mix = readFloat(input);
 			signed char bendDirection = readSByte(input);
-			spIkConstraintTimeline_setFrame(timeline, frameIndex, time, mix, bendDirection);
+			int compress = readBoolean(input);
+			int stretch = readBoolean(input);
+			spIkConstraintTimeline_setFrame(timeline, frameIndex, time, mix, bendDirection, compress, stretch);
 			if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 		}
-		kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+		spTimelineArray_add(timelines, (spTimeline*)timeline);
 		duration = MAX(duration, timeline->frames[(frameCount - 1) * IKCONSTRAINT_ENTRIES]);
 	}
 
@@ -414,7 +415,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 					scaleMix, shearMix);
 			if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 		}
-		kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+		spTimelineArray_add(timelines, (spTimeline*)timeline);
 		duration = MAX(duration, timeline->frames[(frameCount - 1) * TRANSFORMCONSTRAINT_ENTRIES]);
 	}
 
@@ -446,7 +447,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spPathConstraintPositionTimeline_setFrame(timeline, frameIndex, time, value);
 						if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 					}
-					kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[(frameCount - 1) * PATHCONSTRAINTPOSITION_ENTRIES]);
 					break;
 				}
@@ -460,7 +461,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 						spPathConstraintMixTimeline_setFrame(timeline, frameIndex, time, rotateMix, translateMix);
 						if (frameIndex < frameCount - 1) readCurve(input, SUPER(timeline), frameIndex);
 					}
-					kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+					spTimelineArray_add(timelines, (spTimeline*)timeline);
 					duration = MAX(duration, timeline->frames[(frameCount - 1) * PATHCONSTRAINTMIX_ENTRIES]);
 				}
 			}
@@ -482,10 +483,9 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 				spVertexAttachment* attachment = SUB_CAST(spVertexAttachment,
 						spSkin_getAttachment(skin, slotIndex, attachmentName));
 				if (!attachment) {
-					int i;
-					for (i = 0; i < kv_size(timelines); ++i)
-						spTimeline_dispose(kv_A(timelines, i));
-					kv_destroy(timelines);
+					for (i = 0; i < timelines->size; ++i)
+						spTimeline_dispose(timelines->items[i]);
+					spTimelineArray_dispose(timelines);
 					_spSkeletonBinary_setError(self, "Attachment not found: ", attachmentName);
 					FREE(attachmentName);
 					return 0;
@@ -535,7 +535,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 				}
 				FREE(tempDeform);
 
-				kv_push(spTimeline*, timelines, SUPER(SUPER(timeline)));
+				spTimelineArray_add(timelines, (spTimeline*)timeline);
 				duration = MAX(duration, timeline->frames[frameCount - 1]);
 			}
 		}
@@ -572,7 +572,7 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 			spDrawOrderTimeline_setFrame(timeline, i, time, drawOrder);
 			FREE(drawOrder);
 		}
-		kv_push(spTimeline*, timelines, SUPER(timeline));
+		spTimelineArray_add(timelines, (spTimeline*)timeline);
 		duration = MAX(duration, timeline->frames[drawOrderCount - 1]);
 	}
 
@@ -590,19 +590,22 @@ static spAnimation* _spSkeletonBinary_readAnimation (spSkeletonBinary* self, con
 				event->stringValue = readString(input);
 			else
 				MALLOC_STR(event->stringValue, eventData->stringValue);
+			if (eventData->audioPath) {
+				event->volume = readFloat(input);
+				event->balance = readFloat(input);
+			}
 			spEventTimeline_setFrame(timeline, i, event);
 		}
-		kv_push(spTimeline*, timelines, SUPER(timeline));
+		spTimelineArray_add(timelines, (spTimeline*)timeline);
 		duration = MAX(duration, timeline->frames[eventCount - 1]);
 	}
-
-	kv_trim(spTimeline*, timelines);
 
 	animation = spAnimation_create(name, 0);
 	FREE(animation->timelines);
 	animation->duration = duration;
-	animation->timelinesCount = kv_size(timelines);
-	animation->timelines = kv_array(timelines);
+	animation->timelinesCount = timelines->size;
+	animation->timelines = timelines->items;
+	FREE(timelines);
 	return animation;
 }
 
@@ -634,8 +637,8 @@ static void _readVertices(spSkeletonBinary* self, _dataInput* input, spVertexAtt
 		int vertexCount) {
 	int i, ii;
 	int verticesLength = vertexCount << 1;
-	kvec_t(float) weights;
-	kvec_t(int) bones;
+	spFloatArray* weights = spFloatArray_create(8);
+	spIntArray* bones = spIntArray_create(8);
 
 	attachment->worldVerticesLength = verticesLength;
 
@@ -644,33 +647,32 @@ static void _readVertices(spSkeletonBinary* self, _dataInput* input, spVertexAtt
 		attachment->vertices = _readFloatArray(input, verticesLength, self->scale);
 		attachment->bonesCount = 0;
 		attachment->bones = 0;
+		spFloatArray_dispose(weights);
+		spIntArray_dispose(bones);
 		return;
 	}
 
-	kv_init(weights);
-	kv_resize(float, weights, verticesLength * 3 * 3);
-
-	kv_init(bones);
-	kv_resize(int, bones, verticesLength * 3);
+	spFloatArray_ensureCapacity(weights, verticesLength * 3 * 3);
+	spIntArray_ensureCapacity(bones, verticesLength * 3);
 
 	for (i = 0; i < vertexCount; ++i) {
 		int boneCount = readVarint(input, 1);
-		kv_push(int, bones, boneCount);
+		spIntArray_add(bones, boneCount);
 		for (ii = 0; ii < boneCount; ++ii) {
-			kv_push(int, bones, readVarint(input, 1));
-			kv_push(float, weights, readFloat(input) * self->scale);
-			kv_push(float, weights, readFloat(input) * self->scale);
-			kv_push(float, weights, readFloat(input));
+			spIntArray_add(bones, readVarint(input, 1));
+			spFloatArray_add(weights, readFloat(input) * self->scale);
+			spFloatArray_add(weights, readFloat(input) * self->scale);
+			spFloatArray_add(weights, readFloat(input));
 		}
 	}
 
-	kv_trim(float, weights);
-	attachment->verticesCount = kv_size(weights);
-	attachment->vertices = kv_array(weights);
+	attachment->verticesCount = weights->size;
+	attachment->vertices = weights->items;
+	FREE(weights);
 
-	kv_trim(int, bones);
-	attachment->bonesCount = kv_size(bones);
-	attachment->bones = kv_array(bones);
+	attachment->bonesCount = bones->size;
+	attachment->bones = bones->items;
+	FREE(bones);
 }
 
 spAttachment* spSkeletonBinary_readAttachment(spSkeletonBinary* self, _dataInput* input,
@@ -783,6 +785,7 @@ spAttachment* spSkeletonBinary_readAttachment(spSkeletonBinary* self, _dataInput
 			}
 			if (nonessential) readInt(input); /* Skip color. */
 			if (freeName) FREE(name);
+			spAttachmentLoader_configureAttachment(self->attachmentLoader, attachment);
 			return attachment;
 		}
 		case SP_ATTACHMENT_POINT: {
@@ -795,6 +798,7 @@ spAttachment* spSkeletonBinary_readAttachment(spSkeletonBinary* self, _dataInput
 			if (nonessential) {
 				readColor(input, &point->color.r, &point->color.g, &point->color.b, &point->color.a);
 			}
+			spAttachmentLoader_configureAttachment(self->attachmentLoader, attachment);
 			return attachment;
 		}
 		case SP_ATTACHMENT_CLIPPING: {
@@ -885,6 +889,7 @@ spSkeletonData* spSkeletonBinary_readSkeletonData (spSkeletonBinary* self, const
 		/* Skip images path & fps */
 		readFloat(input);
 		FREE(readString(input));
+		FREE(readString(input));
 	}
 
 	/* Bones. */
@@ -958,6 +963,9 @@ spSkeletonData* spSkeletonBinary_readSkeletonData (spSkeletonBinary* self, const
 		data->target = skeletonData->bones[readVarint(input, 1)];
 		data->mix = readFloat(input);
 		data->bendDirection = readSByte(input);
+		data->compress = readBoolean(input);
+		data->stretch = readBoolean(input);
+		data->uniform = readBoolean(input);
 		skeletonData->ikConstraints[i] = data;
 	}
 
@@ -1072,6 +1080,11 @@ spSkeletonData* spSkeletonBinary_readSkeletonData (spSkeletonBinary* self, const
 		eventData->intValue = readVarint(input, 0);
 		eventData->floatValue = readFloat(input);
 		eventData->stringValue = readString(input);
+		eventData->audioPath = readString(input);
+		if (eventData->audioPath) {
+			eventData->volume = readFloat(input);
+			eventData->balance = readFloat(input);
+		}
 		skeletonData->events[i] = eventData;
 	}
 

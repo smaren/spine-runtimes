@@ -36,26 +36,9 @@
 
 #define LOCTEXT_NAMESPACE "Spine"
 
-FString USpineAtlasAsset::GetRawData () const {
-	return rawData;
-}
-
-FName USpineAtlasAsset::GetAtlasFileName () const {
-#if WITH_EDITORONLY_DATA
-	TArray<FString> files;
-	if (importData) importData->ExtractFilenames(files);
-	if (files.Num() > 0) return FName(*files[0]);
-	else return atlasFileName;
-#else
-	return atlasFileName;
-#endif
-}
+using namespace spine;
 
 #if WITH_EDITORONLY_DATA
-
-void USpineAtlasAsset::SetRawData (const FString &RawData) {
-	this->rawData = RawData;
-}
 
 void USpineAtlasAsset::SetAtlasFileName (const FName &AtlasFileName) {
 	importData->UpdateFilenameOnly(AtlasFileName.ToString());
@@ -85,29 +68,47 @@ void USpineAtlasAsset::Serialize (FArchive& Ar) {
 
 #endif
 
+FName USpineAtlasAsset::GetAtlasFileName() const {
+#if WITH_EDITORONLY_DATA
+	TArray<FString> files;
+	if (importData) importData->ExtractFilenames(files);
+	if (files.Num() > 0) return FName(*files[0]);
+	else return atlasFileName;
+#else
+	return atlasFileName;
+#endif
+}
+
+void USpineAtlasAsset::SetRawData(const FString &RawData) {
+	this->rawData = RawData;
+	if (atlas) {
+		delete atlas;
+		atlas = nullptr;
+	}
+}
+
 void USpineAtlasAsset::BeginDestroy () {
 	if (atlas) {
-		spAtlas_dispose(atlas);
+		delete atlas;
 		atlas = nullptr;
 	}
 	Super::BeginDestroy();
 }
 
-spAtlas* USpineAtlasAsset::GetAtlas (bool ForceReload) {
-	if (!atlas || ForceReload) {
+Atlas* USpineAtlasAsset::GetAtlas () {
+	if (!atlas) {
 		if (atlas) {
-			spAtlas_dispose(atlas);
+			delete atlas;
 			atlas = nullptr;
 		}
 		std::string t = TCHAR_TO_UTF8(*rawData);
-		atlas = spAtlas_create(t.c_str(), strlen(t.c_str()), "", nullptr);
-		spAtlasPage* page = atlas->pages;
-		int i = 0;
-		while (page) {
-			int num = atlasPages.Num();
-			if (atlasPages.Num() > 0 && atlasPages.Num() > i)
-				page->rendererObject = atlasPages[i++];
-			page = page->next;
+
+		atlas = new (__FILE__, __LINE__) Atlas(t.c_str(), strlen(t.c_str()), "", nullptr);
+		Vector<AtlasPage*> &pages = atlas->getPages();
+		for (size_t i = 0, n = pages.size(), j = 0; i < n; i++) {
+			AtlasPage* page = pages[i];
+			if (atlasPages.Num() > 0 && atlasPages.Num() > (int32)i)
+				page->setRendererObject(atlasPages[j++]);
 		}
 	}
 	return this->atlas;

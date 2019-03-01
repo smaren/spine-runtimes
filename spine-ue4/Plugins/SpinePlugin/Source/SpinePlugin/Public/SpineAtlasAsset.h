@@ -34,24 +34,24 @@
 #include "spine/spine.h"
 #include "SpineAtlasAsset.generated.h"
 
-UCLASS(ClassGroup=(Spine))
+UCLASS(BlueprintType, ClassGroup=(Spine))
 class SPINEPLUGIN_API USpineAtlasAsset: public UObject {
 	GENERATED_BODY()
 	
 public:
-	spAtlas* GetAtlas (bool ForceReload = false);
+	spine::Atlas* GetAtlas ();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<UTexture2D*> atlasPages;
 	
-	FString GetRawData () const;
+	void SetRawData(const FString &RawData);
 	
 	FName GetAtlasFileName () const;
 	
 	virtual void BeginDestroy () override;
 	
 protected:
-	spAtlas* atlas = nullptr;
+	spine::Atlas* atlas = nullptr;
 	
 	UPROPERTY()
 	FString rawData;
@@ -62,7 +62,6 @@ protected:
 #if WITH_EDITORONLY_DATA
 
 public:
-	void SetRawData (const FString &RawData);
 	void SetAtlasFileName (const FName &AtlasFileName);
 	
 protected:

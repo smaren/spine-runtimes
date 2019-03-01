@@ -76,28 +76,16 @@ module spine {
 
 			let parent = this.parent;
 			if (parent == null) { // Root bone.
-				let rotationY = rotation + 90 + shearY;
-				let la = MathUtils.cosDeg(rotation + shearX) * scaleX;
-				let lb = MathUtils.cosDeg(rotationY) * scaleY;
-				let lc = MathUtils.sinDeg(rotation + shearX) * scaleX;
-				let ld = MathUtils.sinDeg(rotationY) * scaleY;
 				let skeleton = this.skeleton;
-				if (skeleton.flipX) {
-					x = -x;
-					la = -la;
-					lb = -lb;
-				}
-				if (skeleton.flipY) {
-					y = -y;
-					lc = -lc;
-					ld = -ld;
-				}
-				this.a = la;
-				this.b = lb;
-				this.c = lc;
-				this.d = ld;
-				this.worldX = x + skeleton.x;
-				this.worldY = y + skeleton.y;
+				let rotationY = rotation + 90 + shearY;
+				let sx = skeleton.scaleX;
+				let sy = skeleton.scaleY;
+				this.a = MathUtils.cosDeg(rotation + shearX) * scaleX * sx;
+				this.b = MathUtils.cosDeg(rotationY) * scaleY * sy;
+				this.c = MathUtils.sinDeg(rotation + shearX) * scaleX * sx;
+				this.d = MathUtils.sinDeg(rotationY) * scaleY * sy;
+				this.worldX = x * sx + skeleton.x;
+				this.worldY = y * sy + skeleton.y;
 				return;
 			}
 
@@ -155,13 +143,15 @@ module spine {
 			case TransformMode.NoScaleOrReflection: {
 				let cos = MathUtils.cosDeg(rotation);
 				let sin = MathUtils.sinDeg(rotation);
-				let za = pa * cos + pb * sin;
-				let zc = pc * cos + pd * sin;
+				let za = (pa * cos + pb * sin) / this.skeleton.scaleX;
+				let zc = (pc * cos + pd * sin) / this.skeleton.scaleY;
 				let s = Math.sqrt(za * za + zc * zc);
 				if (s > 0.00001) s = 1 / s;
 				za *= s;
 				zc *= s;
 				s = Math.sqrt(za * za + zc * zc);
+				if (this.data.transformMode == TransformMode.NoScale
+					&& (pa * pd - pb * pc < 0) != (this.skeleton.scaleX < 0 != this.skeleton.scaleY < 0)) s = -s;
 				let r = Math.PI / 2 + Math.atan2(zc, za);
 				let zb = Math.cos(r) * s;
 				let zd = Math.sin(r) * s;
@@ -169,25 +159,17 @@ module spine {
 				let lb = MathUtils.cosDeg(90 + shearY) * scaleY;
 				let lc = MathUtils.sinDeg(shearX) * scaleX;
 				let ld = MathUtils.sinDeg(90 + shearY) * scaleY;
-				if (this.data.transformMode != TransformMode.NoScaleOrReflection ? pa * pd - pb * pc < 0 : this.skeleton.flipX != this.skeleton.flipY) {
-					zb = -zb;
-					zd = -zd;
-				}
 				this.a = za * la + zb * lc;
 				this.b = za * lb + zb * ld;
 				this.c = zc * la + zd * lc;
 				this.d = zc * lb + zd * ld;
-				return;
+				break;
 			}
 			}
-			if (this.skeleton.flipX) {
-				this.a = -this.a;
-				this.b = -this.b;
-			}
-			if (this.skeleton.flipY) {
-				this.c = -this.c;
-				this.d = -this.d;
-			}
+			this.a *= this.skeleton.scaleX;
+			this.b *= this.skeleton.scaleX;
+			this.c *= this.skeleton.scaleY;
+			this.d *= this.skeleton.scaleY;
 		}
 
 		setToSetupPose () {
@@ -280,10 +262,11 @@ module spine {
 
 		worldToLocalRotation (worldRotation: number) {
 			let sin = MathUtils.sinDeg(worldRotation), cos = MathUtils.cosDeg(worldRotation);
-			return Math.atan2(this.a * sin - this.c * cos, this.d * cos - this.b * sin) * MathUtils.radDeg;
+			return Math.atan2(this.a * sin - this.c * cos, this.d * cos - this.b * sin) * MathUtils.radDeg + this.rotation - this.shearX;
 		}
 
 		localToWorldRotation (localRotation: number) {
+			localRotation -= this.rotation - this.shearX;
 			let sin = MathUtils.sinDeg(localRotation), cos = MathUtils.cosDeg(localRotation);
 			return Math.atan2(cos * this.c + sin * this.d, cos * this.a + sin * this.b) * MathUtils.radDeg;
 		}

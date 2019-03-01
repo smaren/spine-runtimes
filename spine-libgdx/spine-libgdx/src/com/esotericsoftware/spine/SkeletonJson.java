@@ -103,6 +103,10 @@ public class SkeletonJson {
 		this.scale = scale;
 	}
 
+	protected JsonValue parse (FileHandle file) {
+		return new JsonReader().parse(file);
+	}
+
 	public SkeletonData readSkeletonData (FileHandle file) {
 		if (file == null) throw new IllegalArgumentException("file cannot be null.");
 
@@ -111,7 +115,7 @@ public class SkeletonJson {
 		SkeletonData skeletonData = new SkeletonData();
 		skeletonData.name = file.nameWithoutExtension();
 
-		JsonValue root = new JsonReader().parse(file);
+		JsonValue root = parse(file);
 
 		// Skeleton.
 		JsonValue skeletonMap = root.get("skeleton");
@@ -122,6 +126,7 @@ public class SkeletonJson {
 			skeletonData.height = skeletonMap.getFloat("height", 0);
 			skeletonData.fps = skeletonMap.getFloat("fps", 30);
 			skeletonData.imagesPath = skeletonMap.getString("images", null);
+			skeletonData.audioPath = skeletonMap.getString("audio", null);
 		}
 
 		// Bones.
@@ -184,8 +189,11 @@ public class SkeletonJson {
 			data.target = skeletonData.findBone(targetName);
 			if (data.target == null) throw new SerializationException("IK target bone not found: " + targetName);
 
-			data.bendDirection = constraintMap.getBoolean("bendPositive", true) ? 1 : -1;
 			data.mix = constraintMap.getFloat("mix", 1);
+			data.bendDirection = constraintMap.getBoolean("bendPositive", true) ? 1 : -1;
+			data.compress = constraintMap.getBoolean("compress", false);
+			data.stretch = constraintMap.getBoolean("stretch", false);
+			data.uniform = constraintMap.getBoolean("uniform", false);
 
 			skeletonData.ikConstraints.add(data);
 		}
@@ -264,7 +272,7 @@ public class SkeletonJson {
 					try {
 						Attachment attachment = readAttachment(entry, skin, slot.index, entry.name, skeletonData);
 						if (attachment != null) skin.addAttachment(slot.index, entry.name, attachment);
-					} catch (Exception ex) {
+					} catch (Throwable ex) {
 						throw new SerializationException("Error reading attachment: " + entry.name + ", skin: " + skin, ex);
 					}
 				}
@@ -291,6 +299,11 @@ public class SkeletonJson {
 			data.intValue = eventMap.getInt("int", 0);
 			data.floatValue = eventMap.getFloat("float", 0f);
 			data.stringValue = eventMap.getString("string", "");
+			data.audioPath = eventMap.getString("audio", null);
+			if (data.audioPath != null) {
+				data.volume = eventMap.getFloat("volume", 1);
+				data.balance = eventMap.getFloat("balance", 0);
+			}
 			skeletonData.events.add(data);
 		}
 
@@ -298,7 +311,7 @@ public class SkeletonJson {
 		for (JsonValue animationMap = root.getChild("animations"); animationMap != null; animationMap = animationMap.next) {
 			try {
 				readAnimation(animationMap, animationMap.name, skeletonData);
-			} catch (Exception ex) {
+			} catch (Throwable ex) {
 				throw new SerializationException("Error reading animation: " + animationMap.name, ex);
 			}
 		}
@@ -566,7 +579,8 @@ public class SkeletonJson {
 			int frameIndex = 0;
 			for (JsonValue valueMap = constraintMap.child; valueMap != null; valueMap = valueMap.next) {
 				timeline.setFrame(frameIndex, valueMap.getFloat("time"), valueMap.getFloat("mix", 1),
-					valueMap.getBoolean("bendPositive", true) ? 1 : -1);
+					valueMap.getBoolean("bendPositive", true) ? 1 : -1, valueMap.getBoolean("compress", false),
+					valueMap.getBoolean("stretch", false));
 				readCurve(valueMap, timeline, frameIndex);
 				frameIndex++;
 			}
@@ -730,9 +744,13 @@ public class SkeletonJson {
 				EventData eventData = skeletonData.findEvent(eventMap.getString("name"));
 				if (eventData == null) throw new SerializationException("Event not found: " + eventMap.getString("name"));
 				Event event = new Event(eventMap.getFloat("time"), eventData);
-				event.intValue = eventMap.getInt("int", eventData.getInt());
-				event.floatValue = eventMap.getFloat("float", eventData.getFloat());
-				event.stringValue = eventMap.getString("string", eventData.getString());
+				event.intValue = eventMap.getInt("int", eventData.intValue);
+				event.floatValue = eventMap.getFloat("float", eventData.floatValue);
+				event.stringValue = eventMap.getString("string", eventData.stringValue);
+				if (event.getData().audioPath != null) {
+					event.volume = eventMap.getFloat("volume", eventData.volume);
+					event.balance = eventMap.getFloat("balance", eventData.balance);
+				}
 				timeline.setFrame(frameIndex++, event);
 			}
 			timelines.add(timeline);

@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 #include <spine/SkeletonTwoColorBatch.h>
-#include <spine/extension.h>
+#include <spine/Extension.h>
 #include <algorithm>
 
 USING_NS_CC;
@@ -57,7 +57,7 @@ void TwoColorTrianglesCommand::init(float globalOrder, GLuint textureID, GLProgr
 	if(_triangles.indexCount % 3 != 0) {
 	int count = _triangles.indexCount;
 		_triangles.indexCount = count / 3 * 3;
-		CCLOGERROR("Resize indexCount from %zd to %zd, size must be multiple times of 3", count, _triangles.indexCount);
+		CCLOGERROR("Resize indexCount from %d to %d, size must be multiple times of 3", count, _triangles.indexCount);
 	}
 	_mv = mv;
 
@@ -163,12 +163,10 @@ void SkeletonTwoColorBatch::destroyInstance () {
 	}
 }
 
-SkeletonTwoColorBatch::SkeletonTwoColorBatch () {
+SkeletonTwoColorBatch::SkeletonTwoColorBatch () : _vertexBuffer(0), _indexBuffer(0) {
 	for (unsigned int i = 0; i < INITIAL_SIZE; i++) {
 		_commandsPool.push_back(new TwoColorTrianglesCommand());
 	}
-	
-	_indices = spUnsignedShortArray_create(8);
 	
 	reset ();
 	
@@ -176,7 +174,7 @@ SkeletonTwoColorBatch::SkeletonTwoColorBatch () {
 	// for the next frame
 	Director::getInstance()->getEventDispatcher()->addCustomEventListener(EVENT_AFTER_DRAW_RESET_POSITION, [this](EventCustom* eventCustom){
 		this->update(0);
-	});;
+	});
 	
 	_twoColorTintShader = cocos2d::GLProgram::createWithByteArrays(TWO_COLOR_TINT_VERTEX_SHADER, TWO_COLOR_TINT_FRAGMENT_SHADER);
 	_twoColorTintShaderState = GLProgramState::getOrCreateWithGLProgram(_twoColorTintShader);
@@ -195,15 +193,13 @@ SkeletonTwoColorBatch::SkeletonTwoColorBatch () {
 SkeletonTwoColorBatch::~SkeletonTwoColorBatch () {
 	Director::getInstance()->getEventDispatcher()->removeCustomEventListeners(EVENT_AFTER_DRAW_RESET_POSITION);
 	
-	spUnsignedShortArray_dispose(_indices);
-	
 	for (unsigned int i = 0; i < _commandsPool.size(); i++) {
 		delete _commandsPool[i];
 		_commandsPool[i] = nullptr;
 	}
 	_twoColorTintShader->release();
-	delete _vertexBuffer;
-	delete _indexBuffer;
+	delete[] _vertexBuffer;
+	delete[] _indexBuffer;
 }
 
 void SkeletonTwoColorBatch::update (float delta) {	
@@ -234,11 +230,11 @@ void SkeletonTwoColorBatch::deallocateVertices(uint32_t numVertices) {
 
 
 unsigned short* SkeletonTwoColorBatch::allocateIndices(uint32_t numIndices) {
-	if (_indices->capacity - _indices->size < numIndices) {
-		unsigned short* oldData = _indices->items;
-		int oldSize =_indices->size;
-		spUnsignedShortArray_ensureCapacity(_indices, _indices->size + numIndices);
-		unsigned short* newData = _indices->items;
+	if (_indices.getCapacity() - _indices.size() < numIndices) {
+		unsigned short* oldData = _indices.buffer();
+		int oldSize =_indices.size();
+		_indices.ensureCapacity(_indices.size() + numIndices);
+		unsigned short* newData = _indices.buffer();
 		for (uint32_t i = 0; i < this->_nextFreeCommand; i++) {
 			TwoColorTrianglesCommand* command = _commandsPool[i];
 			TwoColorTriangles& triangles = (TwoColorTriangles&)command->getTriangles();
@@ -248,13 +244,13 @@ unsigned short* SkeletonTwoColorBatch::allocateIndices(uint32_t numIndices) {
 		}
 	}
 	
-	unsigned short* indices = _indices->items + _indices->size;
-	_indices->size += numIndices;
+	unsigned short* indices = _indices.buffer() + _indices.size();
+	_indices.setSize(_indices.size() + numIndices, 0);
 	return indices;
 }
 
 void SkeletonTwoColorBatch::deallocateIndices(uint32_t numIndices) {
-	_indices->size -= numIndices;
+	_indices.setSize(_indices.size() - numIndices, 0);
 }
 
 TwoColorTrianglesCommand* SkeletonTwoColorBatch::addCommand(cocos2d::Renderer* renderer, float globalOrder, GLuint textureID, cocos2d::GLProgramState* glProgramState, cocos2d::BlendFunc blendType, const TwoColorTriangles& triangles, const cocos2d::Mat4& mv, uint32_t flags) {
@@ -330,7 +326,7 @@ void SkeletonTwoColorBatch::flush (TwoColorTrianglesCommand* materialCommand) {
 void SkeletonTwoColorBatch::reset() {
 	_nextFreeCommand = 0;
 	_numVertices = 0;
-	_indices->size = 0;
+	_indices.setSize(0, 0);
 	_numVerticesBuffer = 0;
 	_numIndicesBuffer = 0;
 	_lastCommand = nullptr;

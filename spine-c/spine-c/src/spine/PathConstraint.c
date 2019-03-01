@@ -82,10 +82,10 @@ void spPathConstraint_apply (spPathConstraint* self) {
 	int/*bool*/tip;
 	float rotateMix = self->rotateMix, translateMix = self->translateMix;
 	int/*bool*/ translate = translateMix > 0, rotate = rotateMix > 0;
+	int lengthSpacing;
 	spPathAttachment* attachment = (spPathAttachment*)self->target->attachment;
 	spPathConstraintData* data = self->data;
-	spSpacingMode spacingMode = data->spacingMode;
-	int lengthSpacing = spacingMode == SP_SPACING_MODE_LENGTH;
+	int percentSpacing = data->spacingMode == SP_SPACING_MODE_PERCENT;
 	spRotateMode rotateMode = data->rotateMode;
 	int tangents = rotateMode == SP_ROTATE_MODE_TANGENT, scale = rotateMode == SP_ROTATE_MODE_CHAIN_SCALE;
 	int boneCount = self->bonesCount, spacesCount = tangents ? boneCount : boneCount + 1;
@@ -104,7 +104,7 @@ void spPathConstraint_apply (spPathConstraint* self) {
 	spaces[0] = 0;
 	lengths = 0;
 	spacing = self->spacing;
-	if (scale || lengthSpacing) {
+	if (scale || !percentSpacing) {
 		if (scale) {
 			if (self->lengthsCount != boneCount) {
 				if (self->lengths) FREE(self->lengths);
@@ -113,12 +113,20 @@ void spPathConstraint_apply (spPathConstraint* self) {
 			}
 			lengths = self->lengths;
 		}
+		lengthSpacing = data->spacingMode == SP_SPACING_MODE_LENGTH;
 		for (i = 0, n = spacesCount - 1; i < n;) {
 			spBone *bone = bones[i];
 			setupLength = bone->data->length;
 			if (setupLength < EPSILON) {
 				if (scale) lengths[i] = 0;
 				spaces[++i] = 0;
+			} else if (percentSpacing) {
+				if (scale) {
+					x = setupLength * bone->a, y = setupLength * bone->c;
+					length = SQRT(x * x + y * y);
+					lengths[i] = length;
+				}
+				spaces[++i] = spacing;
 			} else {
 				x = setupLength * bone->a, y = setupLength * bone->c;
 				length = SQRT(x * x + y * y);
@@ -133,7 +141,7 @@ void spPathConstraint_apply (spPathConstraint* self) {
 	}
 
 	positions = spPathConstraint_computeWorldPositions(self, attachment, spacesCount, tangents,
-		data->positionMode == SP_POSITION_MODE_PERCENT, spacingMode == SP_SPACING_MODE_PERCENT);
+		data->positionMode == SP_POSITION_MODE_PERCENT, percentSpacing);
 	boneX = positions[0], boneY = positions[1], offsetRotation = self->data->offsetRotation;
 	tip = 0;
 	if (offsetRotation == 0)
@@ -216,13 +224,24 @@ static void _addCurvePosition (float p, float x1, float y1, float cx1, float cy1
 	float tt, ttt, u, uu, uuu;
 	float ut, ut3, uut3, utt3;
 	float x, y;
-	if (p == 0 || _isNan(p, 0)) p = 0.0001f;
+	if (p == 0 || _isNan(p, 0)) {
+		out[o] = x1;
+		out[o + 1] = y1;
+		out[o + 2] = ATAN2(cy1 - y1, cx1 - x1);
+		return;
+	}
 	tt = p * p, ttt = tt * p, u = 1 - p, uu = u * u, uuu = uu * u;
 	ut = u * p, ut3 = ut * 3, uut3 = u * ut3, utt3 = ut3 * p;
 	x = x1 * uuu + cx1 * uut3 + cx2 * utt3 + x2 * ttt, y = y1 * uuu + cy1 * uut3 + cy2 * utt3 + y2 * ttt;
 	out[o] = x;
 	out[o + 1] = y;
-	if (tangents) out[o + 2] = ATAN2(y - (y1 * uu + cy1 * ut * 2 + cy2 * tt), x - (x1 * uu + cx1 * ut * 2 + cx2 * tt));
+	if (tangents) {
+		if (p < 0.001) {
+			out[o + 2] = ATAN2(cy1 - y1, cx1 - x1);
+		} else {
+			out[o + 2] = ATAN2(y - (y1 * uu + cy1 * ut * 2 + cy2 * tt), x - (x1 * uu + cx1 * ut * 2 + cx2 * tt));
+		}
+	}
 }
 
 float* spPathConstraint_computeWorldPositions(spPathConstraint* self, spPathAttachment* path, int spacesCount, int/*bool*/ tangents, int/*bool*/percentPosition, int/**/percentSpacing) {
@@ -248,7 +267,7 @@ float* spPathConstraint_computeWorldPositions(spPathConstraint* self, spPathAtta
 		pathLength = lengths[curveCount];
 		if (percentPosition) position *= pathLength;
 		if (percentSpacing) {
-			for (i = 0; i < spacesCount; i++)
+			for (i = 1; i < spacesCount; i++)
 				spaces[i] *= pathLength;
 		}
 		if (self->worldCount != 8) {
@@ -373,9 +392,12 @@ float* spPathConstraint_computeWorldPositions(spPathConstraint* self, spPathAtta
 		x1 = x2;
 		y1 = y2;
 	}
-	if (percentPosition) position *= pathLength;
+	if (percentPosition)
+		position *= pathLength;
+	else
+		position *= pathLength / path->lengths[curveCount - 1];
 	if (percentSpacing) {
-		for (i = 0; i < spacesCount; i++)
+		for (i = 1; i < spacesCount; i++)
 			spaces[i] *= pathLength;
 	}
 

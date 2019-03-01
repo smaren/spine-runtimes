@@ -52,7 +52,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spine)
 	USpineSkeletonDataAsset* SkeletonData;
 	
-	spSkeleton* GetSkeleton () { return skeleton; };
+	spine::Skeleton* GetSkeleton () { return skeleton; };
 	
 	UFUNCTION(BlueprintCallable, Category = "Components|Spine|Skeleton")
 	bool SetSkin (const FString& SkinName);
@@ -79,16 +79,19 @@ public:
 	void SetSlotsToSetupPose();
 
 	UFUNCTION(BlueprintCallable, Category = "Components|Spine|Skeleton")
-	void SetFlipX(bool flipX);
+	void SetScaleX(float scaleX);
 
 	UFUNCTION(BlueprintCallable, Category = "Components|Spine|Skeleton")
-	bool GetFlipX();
+	float GetScaleX();
 
 	UFUNCTION(BlueprintCallable, Category = "Components|Spine|Skeleton")
-	void SetFlipY(bool flipY);
+	void SetScaleY(float scaleY);
 
 	UFUNCTION(BlueprintCallable, Category = "Components|Spine|Skeleton")
-	bool GetFlipY();
+	float GetScaleY();
+
+	UFUNCTION(BlueprintPure, Category = "Components|Spine|Skeleton")
+	void GetBones(TArray<FString> &Bones);
 	
 	UPROPERTY(BlueprintAssignable, Category = "Components|Spine|Skeleton")
 	FSpineBeforeUpdateWorldTransformDelegate BeforeUpdateWorldTransform;
@@ -109,7 +112,8 @@ protected:
 	virtual void InternalTick(float DeltaTime, bool CallDelegates = true);
 	virtual void DisposeState ();
 
-	spSkeleton* skeleton;
+	spine::Skeleton* skeleton;
 	USpineAtlasAsset* lastAtlas = nullptr;
+	spine::Atlas* lastSpineAtlas = nullptr;
 	USpineSkeletonDataAsset* lastData = nullptr;	
 };

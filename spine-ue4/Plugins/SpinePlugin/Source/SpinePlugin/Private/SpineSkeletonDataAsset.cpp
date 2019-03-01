@@ -37,6 +37,8 @@
 
 #define LOCTEXT_NAMESPACE "Spine"
 
+using namespace spine;
+
 FName USpineSkeletonDataAsset::GetSkeletonDataFileName () const {
 #if WITH_EDITORONLY_DATA
 	TArray<FString> files;
@@ -46,10 +48,6 @@ FName USpineSkeletonDataAsset::GetSkeletonDataFileName () const {
 #else
 	return skeletonDataFileName;
 #endif
-}
-
-TArray<uint8>& USpineSkeletonDataAsset::GetRawData () {
-	return this->rawData;
 }
 
 #if WITH_EDITORONLY_DATA
@@ -84,46 +82,56 @@ void USpineSkeletonDataAsset::Serialize (FArchive& Ar) {
 
 void USpineSkeletonDataAsset::BeginDestroy () {
 	if (this->skeletonData) {
-		spSkeletonData_dispose(this->skeletonData);
+		delete this->skeletonData;
 		this->skeletonData = nullptr;
 	}
 	if (this->animationStateData) {
-		spAnimationStateData_dispose(this->animationStateData);
+		delete this->animationStateData;
 		this->animationStateData = nullptr;
 	}
 	Super::BeginDestroy();
 }
 
-spSkeletonData* USpineSkeletonDataAsset::GetSkeletonData (spAtlas* Atlas, bool ForceReload) {
-	if (!skeletonData || ForceReload) {
+void USpineSkeletonDataAsset::SetRawData(TArray<uint8> &Data) {
+	this->rawData.Empty();
+	this->rawData.Append(Data);
+	if (skeletonData) {
+		delete skeletonData;
+		skeletonData = nullptr;
+	}
+}
+
+SkeletonData* USpineSkeletonDataAsset::GetSkeletonData (Atlas* Atlas) {
+	if (!skeletonData || lastAtlas != Atlas) {
 		if (skeletonData) {
-			spSkeletonData_dispose(skeletonData);
+			delete skeletonData;
 			skeletonData = nullptr;
 		}		
 		int dataLen = rawData.Num();
 		if (skeletonDataFileName.GetPlainNameString().Contains(TEXT(".json"))) {
-			spSkeletonJson* json = spSkeletonJson_create(Atlas);
-			this->skeletonData = spSkeletonJson_readSkeletonData(json, (const char*)rawData.GetData());
+			SkeletonJson* json = new (__FILE__, __LINE__) SkeletonJson(Atlas);
+			this->skeletonData = json->readSkeletonData((const char*)rawData.GetData());
 			if (!skeletonData) {
 #if WITH_EDITORONLY_DATA
-				FMessageDialog::Debugf(FText::FromString(UTF8_TO_TCHAR(json->error)));
+				FMessageDialog::Debugf(FText::FromString(UTF8_TO_TCHAR(json->getError().buffer())));
 #endif
-				UE_LOG(SpineLog, Error, TEXT("Couldn't load skeleton data and atlas: %s"), UTF8_TO_TCHAR(json->error));
+				UE_LOG(SpineLog, Error, TEXT("Couldn't load skeleton data and atlas: %s"), UTF8_TO_TCHAR(json->getError().buffer()));
 			}
-			spSkeletonJson_dispose(json);
+			delete json;
 		} else {
-			spSkeletonBinary* binary = spSkeletonBinary_create(Atlas);
-			this->skeletonData = spSkeletonBinary_readSkeletonData(binary, (const unsigned char*)rawData.GetData(), (int)rawData.Num());
+			SkeletonBinary* binary = new (__FILE__, __LINE__) SkeletonBinary(Atlas);
+			this->skeletonData = binary->readSkeletonData((const unsigned char*)rawData.GetData(), (int)rawData.Num());
 			if (!skeletonData) {
 #if WITH_EDITORONLY_DATA
-				FMessageDialog::Debugf(FText::FromString(UTF8_TO_TCHAR(binary->error)));
+				FMessageDialog::Debugf(FText::FromString(UTF8_TO_TCHAR(binary->getError().buffer())));
 #endif
-				UE_LOG(SpineLog, Error, TEXT("Couldn't load skeleton data and atlas: %s"), UTF8_TO_TCHAR(binary->error));
+				UE_LOG(SpineLog, Error, TEXT("Couldn't load skeleton data and atlas: %s"), UTF8_TO_TCHAR(binary->getError().buffer()));
 			}
-			spSkeletonBinary_dispose(binary);
+			delete binary;
 		}
 		if (animationStateData) {
-			spAnimationStateData_dispose(animationStateData);
+			delete animationStateData;
+			animationStateData = nullptr;
 			GetAnimationStateData(Atlas);
 		}
 		lastAtlas = Atlas;
@@ -131,19 +139,19 @@ spSkeletonData* USpineSkeletonDataAsset::GetSkeletonData (spAtlas* Atlas, bool F
 	return this->skeletonData;
 }
 
-spAnimationStateData* USpineSkeletonDataAsset::GetAnimationStateData(spAtlas* atlas) {
+AnimationStateData* USpineSkeletonDataAsset::GetAnimationStateData(Atlas* atlas) {
 	if (!animationStateData) {
-		spSkeletonData* skeletonData = GetSkeletonData(atlas, false);
-		animationStateData = spAnimationStateData_create(skeletonData);
+		SkeletonData* data = GetSkeletonData(atlas);
+		animationStateData = new (__FILE__, __LINE__) AnimationStateData(data);
 	}
 	for (auto& data : MixData) {
 		if (!data.From.IsEmpty() && !data.To.IsEmpty()) {
 			const char* fromChar = TCHAR_TO_UTF8(*data.From);
 			const char* toChar = TCHAR_TO_UTF8(*data.To);
-			spAnimationStateData_setMixByName(animationStateData, fromChar, toChar, data.Mix);
+			animationStateData->setMix(fromChar, toChar, data.Mix);
 		}
 	}
-	animationStateData->defaultMix = DefaultMix;
+	animationStateData->setDefaultMix(DefaultMix);
 	return this->animationStateData;
 }
 

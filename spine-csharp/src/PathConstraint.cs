@@ -81,22 +81,29 @@ namespace Spine {
 			if (!translate && !rotate) return;
 
 			PathConstraintData data = this.data;
-			SpacingMode spacingMode = data.spacingMode;
-			bool lengthSpacing = spacingMode == SpacingMode.Length;
+			bool percentSpacing = data.spacingMode == SpacingMode.Percent;
 			RotateMode rotateMode = data.rotateMode;
 			bool tangents = rotateMode == RotateMode.Tangent, scale = rotateMode == RotateMode.ChainScale;
 			int boneCount = this.bones.Count, spacesCount = tangents ? boneCount : boneCount + 1;
 			Bone[] bonesItems = this.bones.Items;
 			ExposedList<float> spaces = this.spaces.Resize(spacesCount), lengths = null;
 			float spacing = this.spacing;
-			if (scale || lengthSpacing) {
+			if (scale || !percentSpacing) {
 				if (scale) lengths = this.lengths.Resize(boneCount);
+				bool lengthSpacing = data.spacingMode == SpacingMode.Length;
 				for (int i = 0, n = spacesCount - 1; i < n;) {
 					Bone bone = bonesItems[i];
 					float setupLength = bone.data.length;
 					if (setupLength < PathConstraint.Epsilon) {
 						if (scale) lengths.Items[i] = 0;
 						spaces.Items[++i] = 0;
+					} else if (percentSpacing) {
+						if (scale) {
+							float x = setupLength * bone.a, y = setupLength * bone.c;
+							float length = (float)Math.Sqrt(x * x + y * y);
+							lengths.Items[i] = length;
+						}
+						spaces.Items[++i] = spacing;
 					} else {
 						float x = setupLength * bone.a, y = setupLength * bone.c;
 						float length = (float)Math.Sqrt(x * x + y * y);
@@ -110,7 +117,7 @@ namespace Spine {
 			}
 
 			float[] positions = ComputeWorldPositions(attachment, spacesCount, tangents,
-				data.positionMode == PositionMode.Percent, spacingMode == SpacingMode.Percent);
+				data.positionMode == PositionMode.Percent, percentSpacing);
 			float boneX = positions[0], boneY = positions[1], offsetRotation = data.offsetRotation;
 			bool tip;
 			if (offsetRotation == 0) {
@@ -150,9 +157,8 @@ namespace Spine {
 						float length = bone.data.length;
 						boneX += (length * (cos * a - sin * c) - dx) * rotateMix;
 						boneY += (length * (sin * a + cos * c) - dy) * rotateMix;
-					} else {
+					} else
 						r += offsetRotation;
-					}
 					if (r > MathUtils.PI)
 						r -= MathUtils.PI2;
 					else if (r < -MathUtils.PI) //
@@ -177,15 +183,15 @@ namespace Spine {
 			float[] spacesItems = this.spaces.Items, output = this.positions.Resize(spacesCount * 3 + 2).Items, world;
 			bool closed = path.Closed;
 			int verticesLength = path.WorldVerticesLength, curveCount = verticesLength / 6, prevCurve = NONE;
+            float pathLength = 0;
 
-			float pathLength;
 			if (!path.ConstantSpeed) {
 				float[] lengths = path.Lengths;
 				curveCount -= closed ? 1 : 2;
 				pathLength = lengths[curveCount];
 				if (percentPosition) position *= pathLength;
 				if (percentSpacing) {
-					for (int i = 0; i < spacesCount; i++)
+					for (int i = 1; i < spacesCount; i++)
 						spacesItems[i] *= pathLength;
 				}
 				world = this.world.Resize(8).Items;
@@ -291,9 +297,13 @@ namespace Spine {
 				x1 = x2;
 				y1 = y2;
 			}
-			if (percentPosition) position *= pathLength;
+			if (percentPosition)
+				position *= pathLength;
+			else
+				position *= pathLength / path.lengths[curveCount - 1];
+
 			if (percentSpacing) {
-				for (int i = 0; i < spacesCount; i++)
+				for (int i = 1; i < spacesCount; i++)
 					spacesItems[i] *= pathLength;
 			}
 
@@ -404,14 +414,23 @@ namespace Spine {
 
 		static void AddCurvePosition (float p, float x1, float y1, float cx1, float cy1, float cx2, float cy2, float x2, float y2,
 			float[] output, int o, bool tangents) {
-			if (p < PathConstraint.Epsilon || float.IsNaN(p)) p = PathConstraint.Epsilon;
+			if (p < PathConstraint.Epsilon || float.IsNaN(p)) {
+				output[o] = x1;
+				output[o + 1] = y1;
+				output[o + 2] = (float)Math.Atan2(cy1 - y1, cx1 - x1);
+				return;
+			}
 			float tt = p * p, ttt = tt * p, u = 1 - p, uu = u * u, uuu = uu * u;
 			float ut = u * p, ut3 = ut * 3, uut3 = u * ut3, utt3 = ut3 * p;
 			float x = x1 * uuu + cx1 * uut3 + cx2 * utt3 + x2 * ttt, y = y1 * uuu + cy1 * uut3 + cy2 * utt3 + y2 * ttt;
 			output[o] = x;
 			output[o + 1] = y;
-			if (tangents)
-				output[o + 2] = (float)Math.Atan2(y - (y1 * uu + cy1 * ut * 2 + cy2 * tt), x - (x1 * uu + cx1 * ut * 2 + cx2 * tt));
+			if (tangents) {
+				if (p < 0.001f)
+					output[o + 2] = (float)Math.Atan2(cy1 - y1, cx1 - x1);
+				else
+					output[o + 2] = (float)Math.Atan2(y - (y1 * uu + cy1 * ut * 2 + cy2 * tt), x - (x1 * uu + cx1 * ut * 2 + cx2 * tt));
+			}
 		}
 	}
 }

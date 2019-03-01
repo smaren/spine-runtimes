@@ -65,6 +65,8 @@ void spBone_updateWorldTransformWith (spBone* self, float x, float y, float rota
 	float cosine, sine;
 	float pa, pb, pc, pd;
 	spBone* parent = self->parent;
+	float sx = self->skeleton->scaleX;
+	float sy = self->skeleton->scaleY * (spBone_isYDown() ? -1 : 1);
 
 	self->ax = x;
 	self->ay = y;
@@ -77,26 +79,12 @@ void spBone_updateWorldTransformWith (spBone* self, float x, float y, float rota
 
 	if (!parent) { /* Root bone. */
 		float rotationY = rotation + 90 + shearY;
-		float la = COS_DEG(rotation + shearX) * scaleX;
-		float lb = COS_DEG(rotationY) * scaleY;
-		float lc = SIN_DEG(rotation + shearX) * scaleX;
-		float ld = SIN_DEG(rotationY) * scaleY;
-		if (self->skeleton->flipX) {
-			x = -x;
-			la = -la;
-			lb = -lb;
-		}
-		if (self->skeleton->flipY != yDown) {
-			y = -y;
-			lc = -lc;
-			ld = -ld;
-		}
-		CONST_CAST(float, self->a) = la;
-		CONST_CAST(float, self->b) = lb;
-		CONST_CAST(float, self->c) = lc;
-		CONST_CAST(float, self->d) = ld;
-		CONST_CAST(float, self->worldX) = x + self->skeleton->x;
-		CONST_CAST(float, self->worldY) = y + self->skeleton->y;
+		CONST_CAST(float, self->a) = COS_DEG(rotation + shearX) * scaleX * sx;
+		CONST_CAST(float, self->b) = COS_DEG(rotationY) * scaleY * sy;
+		CONST_CAST(float, self->c) = SIN_DEG(rotation + shearX) * scaleX * sx;
+		CONST_CAST(float, self->d) = SIN_DEG(rotationY) * scaleY * sy;
+		CONST_CAST(float, self->worldX) = x * sx + self->skeleton->x;
+		CONST_CAST(float, self->worldY) = y * sy + self->skeleton->y;
 		return;
 	}
 
@@ -159,39 +147,34 @@ void spBone_updateWorldTransformWith (spBone* self, float x, float y, float rota
 			float za, zc, s;
 			float r, zb, zd, la, lb, lc, ld;
 			cosine = COS_DEG(rotation); sine = SIN_DEG(rotation);
-			za = pa * cosine + pb * sine;
-			zc = pc * cosine + pd * sine;
+			za = (pa * cosine + pb * sine) / sx;
+			zc = (pc * cosine + pd * sine) / sy;
 			s = SQRT(za * za + zc * zc);
 			if (s > 0.00001f) s = 1 / s;
 			za *= s;
 			zc *= s;
 			s = SQRT(za * za + zc * zc);
-			r = PI / 2 + atan2(zc, za);
+			if (self->data->transformMode == SP_TRANSFORMMODE_NOSCALE && (pa * pd - pb * pc < 0) != (sx < 0 != sy < 0))
+				s = -s;
+			r = PI / 2 + ATAN2(zc, za);
 			zb = COS(r) * s;
 			zd = SIN(r) * s;
 			la = COS_DEG(shearX) * scaleX;
 			lb = COS_DEG(90 + shearY) * scaleY;
 			lc = SIN_DEG(shearX) * scaleX;
 			ld = SIN_DEG(90 + shearY) * scaleY;
-			if (self->data->transformMode != SP_TRANSFORMMODE_NOSCALEORREFLECTION ? pa * pd - pb * pc < 0 : self->skeleton->flipX != self->skeleton->flipY) {
-				zb = -zb;
-				zd = -zd;
-			}
 			CONST_CAST(float, self->a) = za * la + zb * lc;
 			CONST_CAST(float, self->b) = za * lb + zb * ld;
 			CONST_CAST(float, self->c) = zc * la + zd * lc;
 			CONST_CAST(float, self->d) = zc * lb + zd * ld;
-			return;
+			break;
 		}
 	}
-	if (self->skeleton->flipX) {
-		CONST_CAST(float, self->a) = -self->a;
-		CONST_CAST(float, self->b) = -self->b;
-	}
-	if (self->skeleton->flipY != yDown) {
-		CONST_CAST(float, self->c) = -self->c;
-		CONST_CAST(float, self->d) = -self->d;
-	}
+
+	CONST_CAST(float, self->a) *= sx;
+	CONST_CAST(float, self->b) *= sx;
+	CONST_CAST(float, self->c) *= sy;
+	CONST_CAST(float, self->d) *= sy;
 }
 
 void spBone_setToSetupPose (spBone* self) {
@@ -283,11 +266,12 @@ float spBone_worldToLocalRotation (spBone* self, float worldRotation) {
 	float sine, cosine;
 	sine = SIN_DEG(worldRotation);
 	cosine = COS_DEG(worldRotation);
-	return ATAN2(self->a * sine - self->c * cosine, self->d * cosine - self->b * sine) * RAD_DEG;
+	return ATAN2(self->a * sine - self->c * cosine, self->d * cosine - self->b * sine) * RAD_DEG + self->rotation - self->shearX;
 }
 
 float spBone_localToWorldRotation (spBone* self, float localRotation) {
 	float sine, cosine;
+	localRotation -= self->rotation - self->shearX;
 	sine = SIN_DEG(localRotation);
 	cosine = COS_DEG(localRotation);
 	return ATAN2(cosine * self->c + sine * self->d, cosine * self->a + sine * self->b) * RAD_DEG;

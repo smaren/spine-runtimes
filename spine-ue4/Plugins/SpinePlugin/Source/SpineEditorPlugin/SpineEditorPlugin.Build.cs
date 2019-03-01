@@ -1,4 +1,5 @@
-// Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
+using System;
+using System.IO;
 
 namespace UnrealBuildTool.Rules
 {
@@ -6,9 +7,13 @@ namespace UnrealBuildTool.Rules
 	{
 		public SpineEditorPlugin(ReadOnlyTargetRules Target) : base(Target)
 		{
-			PublicIncludePaths.AddRange(new string[] { "SpineEditorPlugin/Public", "SpinePlugin/Public/spine-c/include" });
-            
-            PrivateIncludePaths.AddRange(new string[] { "SpineEditorPlugin/Private", "SpinePlugin/Public/spine-c/include" });
+            PrivatePCHHeaderFile = "Private/SpineEditorPluginPrivatePCH.h";
+
+            PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+			PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "../SpinePlugin/Public/spine-cpp/include"));
+
+			PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
+			PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "../SpinePlugin/Public/spine-cpp/include"));
 
             PublicDependencyModuleNames.AddRange(new string[] {
                 "Core",
@@ -17,12 +22,12 @@ namespace UnrealBuildTool.Rules
                 "UnrealEd",
                 "SpinePlugin"
             });
-            
+
             PublicIncludePathModuleNames.AddRange(new string[] {
                "AssetTools",
                "AssetRegistry"
             });
-            
+
             DynamicallyLoadedModuleNames.AddRange(new string[] {
                "AssetTools",
                "AssetRegistry"

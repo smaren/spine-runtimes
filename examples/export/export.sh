@@ -1,15 +1,21 @@
 #!/bin/sh
 set -e
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+cd $SCRIPT_DIR
 
 SPINE_EXE="C:/Program Files (x86)/Spine/Spine.com"
-PLATFORM=`uname`
-echo $PLATFORM
-if [[ $PLATFORM == "Darwin" ]]; then
+if [ ! -f "$SPINE_EXE" ]; then
+   SPINE_EXE="/mnt/c/Program Files (x86)/Spine/Spine.com"
+fi
+if [ ! -f "$SPINE_EXE" ]; then
 	SPINE_EXE="/Applications/Spine/Spine.app/Contents/MacOS/Spine"
 fi
 echo "Spine exe: $SPINE_EXE"
 
-echo "Cleaning..."
+echo "Please enter the Spine editor version to use to clean the examples (e.g. 3.7.58-beta)"
+read version
+
+echo "Cleaning export directories ..."
 rm -rf ../alien/export/*
 rm -rf ../coin/export/*
 rm -rf ../dragon/export/*
@@ -23,10 +29,12 @@ rm -rf ../stretchyman/export/*
 rm -rf ../raptor/export/*
 rm -rf ../tank/export/*
 rm -rf ../vine/export/*
+rm -rf ../owl/export/*
 
 echo ""
 echo "Exporting..."
 "$SPINE_EXE" \
+-u $version -f \
 -i ../alien/alien-ess.spine -o ../alien/export -e json.json \
 -i ../alien/alien-ess.spine -o ../alien/export -e binary.json \
 -i ../alien/alien-pro.spine -o ../alien/export -e json.json \
@@ -90,6 +98,9 @@ echo "Exporting..."
 -i ../stretchyman/images -o ../stretchyman/export -n stretchyman -p atlas-1.0.json \
 -i ../stretchyman/images -o ../stretchyman/export -n stretchyman-pma -p atlas-1.0-pma.json \
 \
+-i ../stretchyman/stretchyman-stretchy-ik-pro.spine -o ../stretchyman/export -e json.json \
+-i ../stretchyman/stretchyman-stretchy-ik-pro.spine -o ../stretchyman/export -e binary.json \
+\
 -i ../tank/tank-pro.spine -o ../tank/export -e json.json \
 -i ../tank/tank-pro.spine -o ../tank/export -e binary.json \
 -i ../tank/images -o ../tank/export -n tank -p atlas-0.5.json \
@@ -98,4 +109,14 @@ echo "Exporting..."
 -i ../vine/vine-pro.spine -o ../vine/export -e json.json \
 -i ../vine/vine-pro.spine -o ../vine/export -e binary.json \
 -i ../vine/images -o ../vine/export -n vine -p atlas-1.0.json \
--i ../vine/images -o ../vine/export -n vine-pma -p atlas-1.0-pma.json
+-i ../vine/images -o ../vine/export -n vine-pma -p atlas-1.0-pma.json \
+\
+-i ../owl/owl-pro.spine -o ../owl/export -e json.json \
+-i ../owl/owl-pro.spine -o ../owl/export -e binary.json \
+-i ../owl/images -o ../owl/export -n owl -p atlas-0.5.json \
+-i ../owl/images -o ../owl/export -n owl-pma -p atlas-0.5-pma.json \
+\
+-i ../windmill/windmill-ess.spine -o ../windmill/export -e json.json \
+-i ../windmill/windmill-ess.spine -o ../windmill/export -e binary.json \
+-i ../windmill/images -o ../windmill/export -n windmill -p atlas-0.5.json \
+-i ../windmill/images -o ../windmill/export -n windmill-pma -p atlas-0.5-pma.json

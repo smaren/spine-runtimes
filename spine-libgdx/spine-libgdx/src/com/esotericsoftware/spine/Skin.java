@@ -34,6 +34,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.ObjectMap.Entry;
 import com.badlogic.gdx.utils.Pool;
+
 import com.esotericsoftware.spine.attachments.Attachment;
 
 /** Stores attachments by slot index and attachment name.
@@ -77,6 +78,15 @@ public class Skin {
 		return attachments.get(lookup);
 	}
 
+	/** Removes the attachment in the skin for the specified slot index and name, if any. */
+	public void removeAttachment (int slotIndex, String name) {
+		if (slotIndex < 0) throw new IllegalArgumentException("slotIndex must be >= 0.");
+		Key key = keyPool.obtain();
+		key.set(slotIndex, name);
+		attachments.remove(key);
+		keyPool.free(key);
+	}
+
 	public void findNamesForSlot (int slotIndex, Array<String> names) {
 		if (names == null) throw new IllegalArgumentException("names cannot be null.");
 		if (slotIndex < 0) throw new IllegalArgumentException("slotIndex must be >= 0.");
@@ -94,7 +104,11 @@ public class Skin {
 	public void clear () {
 		for (Key key : attachments.keys())
 			keyPool.free(key);
-		attachments.clear();
+		attachments.clear(1024);
+	}
+
+	public int size () {
+		return attachments.size;
 	}
 
 	/** The skin's name, which is unique within the skeleton. */
@@ -127,7 +141,7 @@ public class Skin {
 			if (name == null) throw new IllegalArgumentException("name cannot be null.");
 			this.slotIndex = slotIndex;
 			this.name = name;
-			hashCode = 31 * (31 + name.hashCode()) + slotIndex;
+			hashCode = name.hashCode() + slotIndex * 37;
 		}
 
 		public int hashCode () {

@@ -49,19 +49,19 @@ public:
 		float Mix = 0;
 };
 
-UCLASS(ClassGroup=(Spine))
+UCLASS(BlueprintType, ClassGroup=(Spine))
 class SPINEPLUGIN_API USpineSkeletonDataAsset: public UObject {
 	GENERATED_BODY()
 	
 public:
-	spSkeletonData* GetSkeletonData(spAtlas* Atlas, bool ForceReload = false);
+	spine::SkeletonData* GetSkeletonData(spine::Atlas* Atlas);
 
-	spAnimationStateData* GetAnimationStateData(spAtlas* atlas);
+	spine::AnimationStateData* GetAnimationStateData(spine::Atlas* atlas);
 	void SetMix(const FString& from, const FString& to, float mix);
 	float GetMix(const FString& from, const FString& to);
 	
 	FName GetSkeletonDataFileName () const;
-	TArray<uint8>& GetRawData ();
+	void SetRawData (TArray<uint8> &Data);
 	
 	virtual void BeginDestroy () override;
 
@@ -78,9 +78,9 @@ protected:
 	UPROPERTY()
 	FName skeletonDataFileName;
 
-	spSkeletonData* skeletonData;
-	spAnimationStateData* animationStateData;
-	spAtlas* lastAtlas;
+	spine::SkeletonData* skeletonData;
+	spine::AnimationStateData* animationStateData;
+	spine::Atlas* lastAtlas;
 	
 #if WITH_EDITORONLY_DATA
 public:
