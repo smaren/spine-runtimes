@@ -28,7 +28,10 @@ var mixAndApplyBugDemo = function(canvas, bgColor) {
 
         update(skeleton, animationState, 0.2); // The previous animation (translate_100_ms) hangs and leaves its state
 
-        console.log('The bone should have scale of 2 (', bone.scaleX === 2, ')(true) and translate of 0 (', bone.x === 0, ')(false)');
+        // Applying the same state on two skeletons should leave them in the same state
+        animationState.apply(otherSkeleton);
+        animationState.apply(skeleton);
+        console.log(skeleton.findBone('bone').x, '(100)', otherSkeleton.findBone('bone').x, '(0), The state of the skeletons are not identical');
     }
 
     function update (skeleton, animationState, dt) {
