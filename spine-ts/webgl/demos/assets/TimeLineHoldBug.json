@@ -1,0 +1,30 @@
+{
+"skeleton": { "hash": "aERDujWWOVGk+/nwrFdQE1FMmCI", "spine": "3.8.76", "x": -25, "y": -25, "width": 50, "height": 50 },
+"bones": [
+	{ "name": "root" },
+	{ "name": "bone", "parent": "root" }
+],
+"slots": [],
+"skins": [],
+"events": {},
+"animations": {
+	"scale_2": {
+		"bones": {
+			"bone": {
+				"scale": [
+					{ "x": 2, "y": 2 }
+				]
+			}
+		}
+	},
+	"scale_3": {
+		"bones": {
+			"bone": {
+				"scale": [
+					{ "x": 3, "y": 3 }
+				]
+			}
+		}
+	}
+}
+}
