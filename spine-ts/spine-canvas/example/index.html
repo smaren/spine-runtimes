@@ -26,6 +26,7 @@
 		// Load the assets.
 		assetManager = new spine.AssetManager("/assets/");
 		assetManager.loadBinary("spineboy-pro.skel");
+        assetManager.loadJson('spineboy-pro.json')
 		assetManager.loadTextureAtlas("spineboy.atlas");
 		await assetManager.loadAll();
 
@@ -33,7 +34,7 @@
 		let atlas = assetManager.require("spineboy.atlas");
 		let atlasLoader = new spine.AtlasAttachmentLoader(atlas);
 		let skeletonBinary = new spine.SkeletonBinary(atlasLoader);
-		let skeletonData = skeletonBinary.readSkeletonData(assetManager.require("spineboy-pro.skel"));
+        let skeletonData = new spine.SkeletonJson(atlasLoader).readSkeletonData(assetManager.require("spineboy-pro.json"))
 
 		// Instantiate a new skeleton based on the atlas and skeleton data.
 		skeleton = new spine.Skeleton(skeletonData);
@@ -58,6 +59,14 @@
 		var now = Date.now() / 1000;
 		var delta = now - lastFrameTime;
 		lastFrameTime = now;
+        let identityBone = {
+            a: 1,
+            b: 0,
+            c: 0,
+            d: 1,
+            worldX: 0,
+            worldY: 0
+        };
 
 		// Resize the canvas drawing buffer if the canvas CSS width and height changed
 		// and clear the canvas.
@@ -78,7 +87,7 @@
 		// world transforms and render the skeleton.
 		animationState.update(delta);
 		animationState.apply(skeleton);
-		skeleton.updateWorldTransform(spine.Physics.update);
+		skeleton.updateWorldTransformWith(spine.Physics.update, identityBone);
 		skeletonRenderer.draw(skeleton);
 
 		requestAnimationFrame(render);
